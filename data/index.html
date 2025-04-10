@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamepad</title>
+</head>
+<body>
+    <h1>Welcome to gamepad app</h1>
+    <p id="gp-id">gp-id</p>
+
+    <div id="dpad">
+        <h1>Dpad</h1>
+        <ul>
+            <li id="button-12"></li>
+            <li id="button-13"></li>
+            <li id="button-14"></li>
+            <li id="button-15"></li>
+        </ul>
+    </div>
+    <h1>Trigger</h1>
+        <ul>
+            <li id="button-6"></li>
+            <li id="button-7"></li>
+        </ul>
+    <script>
+        //### my gamepad api code - starting code ######
+        
+        let loopStarted = false;
+        // buttons-dpad 12 up, 13 down, 14 left, 15 right        // buttons 6 - left trigger with analog value 0.0 to 1.0
+        // button 7 - right trigger with analog value 0.0 to 1.0
+        // window.ready(function(){})
+        // $(document) is a jquerfunction that must be imported first
+        // $(document).ready(function(){
+        //     console.log("testing");
+        // }, 1000)
+
+        // this function creates an infinit loop counter from 0. It will continuosly update p(counter-id)
+        // var counter = 0;
+        // function updateConuter(){
+        //     counter = counter+1;
+        //     const pCounter = document.getElementById("counter-id");
+        //     pCounter.textContent = counter;
+
+        //     requestAnimationFrame(updateConuter )
+        // }
+        // updateConuter()
+
+        window.addEventListener("gamepadconnected", function(evt){
+            const elem_gp = document.getElementById("gp-id");
+            elem_gp.textContent = `ID: ${evt.gamepad.id}`;
+            // elem_gpid.textContent = `gp-id ${evt.gamepad.id}, gp-index ${evt.gamepad.index}, gp-buttons ${JSON.stringify(evt.gamepad.buttons) }, gp-timestamp ${evt.gamepad.timestamp}, gp-axes ${evt.gamepad.axes}` ;
+            // console.log(evt.gamepad);
+            if(!loopStarted){
+                loopStarted = true;
+                updateGamepad()
+            }
+        })
+
+        window.addEventListener("gamepaddisconnected", function(evt){
+            const elem_gpid = document.getElementById("gpid")
+            elem_gpid.textContent = "gamepad disconnected"
+        })
+
+        function updateGamepad(){
+
+            const gamepad = navigator.getGamepads()[0] // this will get the first controller
+            
+            let button6 = document.getElementById("button-6")
+            let button7 = document.getElementById("button-7")
+            
+            let button12 = document.getElementById("button-12")
+            let button13 = document.getElementById("button-13")
+            let button14 = document.getElementById("button-14")
+            let button15 = document.getElementById("button-15")
+
+            button6.textContent = `${Math.round(gamepad.buttons[6].value * 255)} : ${gamepad.buttons[6].value}`
+            button7.textContent = `${Math.round(gamepad.buttons[7].value * 255)} : ${gamepad.buttons[7].value}`
+            button12.textContent = gamepad.buttons[12].value
+            button13.textContent = gamepad.buttons[13].value
+            button14.textContent = gamepad.buttons[14].value
+            button15.textContent = gamepad.buttons[15].value
+           
+            if(gamepad.buttons[12].pressed ){
+                fetch('/pwm?PWMAFOR=255&PWMBFOR=255', {method: 'POST'})
+                .then((response)=> console.log(response)) 
+            }
+            else if(gamepad.buttons[13].pressed ){
+                fetch("/pwm?PWMABAC=255&PWMBBAC=255", {method: 'POST'})
+                .then((response)=> console.log(response)) 
+            }
+            else if(gamepad.buttons[14].pressed){
+                fetch("/pwm?PWMABAC=255&PWMBFOR=255", {method: 'POST'})
+                .then((response)=> console.log(response))    
+            }
+            else if(gamepad.buttons[15].pressed){
+                fetch("/pwm?PWMAFOR=255&PWMBBAC=255", {method: 'POST'})
+                .then((response)=> console.log(response))    
+            }
+            else{
+                fetch(`/pwm?PWMAFOR=${Math.round(gamepad.buttons[6].value * 255 )}&PWMBFOR=${Math.round(gamepad.buttons[7].value * 255 )}`, {method: 'POST'})
+                .then((response)=> console.log(response))
+            }
+            
+        
+            // this will send the analog value of the gamepad triggers repeatedly
+            // fetch(`http://10.0.0.51/pwm?PWMAFOR=${Math.round(gamepad.buttons[6].value * 255 )}&PWMBFOR=${Math.round(gamepad.buttons[7].value * 255 )}`)
+            // .then((response)=> console.log(response))
+
+
+            // fetch(`http://10.0.0.51/pwm?PWMBFOR=${Math.round(gamepad.buttons[7].value * 255 )}`)
+            // .then((response)=> console.log(response))
+            //    if(gamepad.buttons[12].value ){
+            //     fetch("http://10.0.0.51/pwm?PWMAFOR=255")
+            //     .then((response)=> console.log(response))
+            //    }
+            //    else{
+            //     fetch("http://10.0.0.51/pwm?PWMAFOR=0")
+            //     .then((response)=> console.log(response))
+            //    }
+
+            //this timeout helps throttle fetch request. Will need to write code
+            // that will allow me to send the most recent value.
+
+            // maybe I should have a seperate loop function that will send PWM values every 0.3 seconds
+            //
+
+            // I want to implement a way to send the most recent command from the controller.
+            // - by sending the most recent command from gamepad, I will be able to get most live experience
+            // - by only sending http reqquest when a change has been detected, I will not throttle http coms
+            // 
+
+            // Will I need two loops. Loop one will be getting the live values from the gamepad controller.
+            // The second loop will send api calls to esp32-webserver every 0.5 seconds (twice a sec). And then will send updated commands evevry 0.2 seconds.
+            // - for example, the controller will ping esp32-server every 0.5 just to ensure that changes are received
+            // - and when there is a change that needs to be sent, it will update every 0.1 seconds (push it to the limtit)
+            // - look into making sure esp32-webserver uses udp. UDP is lossy, but offers quicker coms
+            
+            setTimeout( ()=>{ requestAnimationFrame(updateGamepad )}, 200)
+            // requestAnimationFrame(updateGamepad )
+        }
+
+    </script>
+</body>
+</html>
